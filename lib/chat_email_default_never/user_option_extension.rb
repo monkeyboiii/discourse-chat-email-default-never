@@ -2,8 +2,7 @@
 
 module ChatEmailDefaultNever
   module UserOptionExtension
-    # Public on purpose: core's UserOption#set_defaults is public, and a private
-    # override would change its visibility on UserOption.
+    # Public to match core's visibility; see CLAUDE.md § "Boot safety".
     def set_defaults
       super
 

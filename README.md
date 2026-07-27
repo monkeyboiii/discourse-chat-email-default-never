@@ -15,8 +15,19 @@ no rebuild.
 **Existing users are never touched.** Backfilling them is a deliberate operator action; see
 [CLAUDE.md](CLAUDE.md) § Backfill.
 
-**Scope caveat:** `chat_email_frequency` gates only the *unread direct-message* chat summary
-email. Channel mentions and watched threads are gated by the core `default email level` setting
-instead. See [CLAUDE.md](CLAUDE.md) § Scope.
+## Making "never" actually mean never
+
+Out of the box `chat_email_frequency` gates only *unread direct messages*. Category-channel
+@mentions and watched threads are gated by `default email level` instead, so a user set to "never"
+still receives chat summary email for those. Core treats that as intended.
+
+`chat_email_never_suppresses_summary` (default off) closes it at both layers — the enqueue, via
+chat's own `:chat_mailer_send_summary_to_user` modifier, and the render, via a prepend on
+`UserNotifications#chat_summary` that also catches jobs already queued when you flip the setting.
+
+**Scope:** this suppresses the chat *summary* email in full. Chat content that arrives as an
+ordinary PM or topic — flag transcripts to moderators, channel-archive PMs, archived transcripts
+copied into a topic — is governed by `email_messages_level` and category watching, not by this
+plugin. See [CLAUDE.md](CLAUDE.md) § Scope.
 
 Orientation for agents and maintainers: [CLAUDE.md](CLAUDE.md).

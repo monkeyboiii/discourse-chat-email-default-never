@@ -2,3 +2,6 @@ plugins:
   chat_email_default_never_enabled:
     default: false
     client: false
+  chat_email_never_suppresses_summary:
+    default: false
+    client: false

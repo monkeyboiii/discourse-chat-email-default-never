@@ -1,3 +1,4 @@
 zh_CN:
   site_settings:
-    chat_email_default_never_enabled: "新注册用户的 chat_email_frequency 设为 never，而不是数据库默认值“离开时”。关闭 = 保持核心行为。不会修改已有用户。注意：该偏好仅控制“未读私信”聊天摘要邮件；频道提及与关注的话题串由核心的 default email level 设置控制。"
+    chat_email_default_never_enabled: "本插件的总开关。新注册用户的 chat_email_frequency 设为 never，而不是数据库默认值“离开时”。关闭 = 保持核心行为，且下方所有设置均失效。不会修改已有用户。"
+    chat_email_never_suppresses_summary: "让 chat_email_frequency = never 对整封聊天摘要邮件生效。核心仅对未读私信应用“从不”；频道提及与关注的话题串改由“default email level”控制，因此设为 never 的用户仍会收到。开启后将对这些用户完全抑制聊天摘要邮件。不影响以普通私信或话题形式送达的聊天内容（举报私信、频道归档私信、归档记录）。需要上方总开关处于开启状态。"

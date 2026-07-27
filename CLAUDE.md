@@ -71,17 +71,49 @@ makes the admin toggle actually work. Do not remove it and rely on `enabled_site
 Default is `false`, matching the other first-party plugins: installing this via a `launcher rebuild`
 is behaviourally inert, and the behaviour change is a separate, instantly-revertible admin flip.
 
+## The core asymmetry this plugin exists to fix
+
+`chat_email_frequency` gates **only** unread direct messages, in two places that must both be
+patched:
+
+| Layer | File | Mentions / threads gated by | DMs gated by |
+|---|---|---|---|
+| Enqueue (SQL) | `plugins/chat/lib/chat/mailer.rb:85,100` vs `:62` | `email_level <> never` | `chat_email_frequency = when_away` |
+| Render | `plugins/chat/lib/chat/user_notifications_extension.rb:14-15` | `email_level != never` | `... && !send_chat_email_never?` |
+
+So out of the box a user set to "never" **still receives** chat summary email for category-channel
+@mentions and watched threads. Core asserts this as intended behaviour
+(`plugins/chat/spec/components/chat/mailer_spec.rb:81-84`), which is why our fix is default-off.
+
+`chat_email_never_suppresses_summary` closes both layers:
+
+1. **Enqueue** — `register_modifier(:chat_mailer_send_summary_to_user)`, chat's own extension point
+   (`mailer.rb:15`), applied *after* the three CTEs are UNIONed, so one `false` suppresses the
+   summary whichever CTE matched. No SQL duplication, so no drift on a core bump.
+2. **Render** — a prepend on `UserNotifications#chat_summary`. Necessary, not belt-and-braces:
+   `Jobs::UserEmail` renders via `UserNotifications.public_send(type, ...)`
+   (`app/jobs/regular/user_email.rb:240`) **without consulting any modifier**. Jobs already queued
+   or retrying when the operator flips the setting would otherwise still send. This layer is also
+   the authoritative one if another plugin ever registers the same modifier and returns `true`
+   (`apply_modifier` chains in registration order).
+
+Ordering: Ruby `prepend` is LIFO and `chat` sorts before `discourse-*` in `Dir[…].sort`, so ours is
+prepended last, lands outermost, and `super` reaches chat's. Asserted in E2E, not assumed.
+
 ## Scope (do not over-promise)
 
-`chat_email_frequency` is referenced exactly once in `plugins/chat/lib/chat/mailer.rb`, inside the
-`unread_dms` CTE. The sibling `unread_mentions` and `unread_threads` CTEs gate on
-`eu.email_level <> never` instead, and all three are additionally gated by `uo.chat_enabled` and
-`u.last_seen_at < now() - interval '15 minutes'`.
+`chat_email_never_suppresses_summary` suppresses the **chat summary email** in full. It does not —
+and cannot — touch chat-derived content that reaches email as an ordinary PM or topic:
 
-So this plugin suppresses **unread direct-message chat summary emails only**. Category-channel
-@mentions and watched-thread messages still enqueue `Jobs::UserEmail type: "chat_summary"`. For "no
-chat email at all", also set core's `default email level` to `never` — but note that suppresses
-ordinary topic email too.
+- flag PMs carrying a `Chat::TranscriptService` transcript to moderators (`lib/chat/review_queue.rb`)
+- channel-archive system PMs to the archiving staff member (`lib/chat/channel_archive_service.rb`)
+- an archived channel's transcripts copied into a real Topic, which then follows normal
+  watching/digest rules
+
+Those are governed by `email_messages_level` and category watching. Verified clean: core digest and
+all core mailer views contain no chat content, and per-notification chat emails never fire —
+`NotificationEmailer::EmailUser` defines no `chat_*` method, so those notification types are
+silently skipped.
 
 ## Backfill (existing users)
 
