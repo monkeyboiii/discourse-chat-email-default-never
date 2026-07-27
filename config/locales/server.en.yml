@@ -1,0 +1,3 @@
+en:
+  site_settings:
+    chat_email_default_never_enabled: "Assign chat_email_frequency = never to newly created users instead of the database default of 'when away'. Off = core behaviour. Existing users are never touched. Note this preference gates only the unread direct-message chat summary email; channel mentions and watched threads are gated by the core 'default email level' setting."
